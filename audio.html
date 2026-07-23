@@ -131,6 +131,12 @@
             <button id="listenButton" class="audio-button" type="button" aria-label="Listen to this chapter">▶ Listen</button>
             <button id="pauseButton" class="audio-button" type="button" aria-label="Pause narration" disabled>⏸ Pause</button>
             <button id="stopButton" class="audio-button" type="button" aria-label="Stop narration" disabled>■ Stop</button>
+            <label class="voice-control">
+              <span>Voice</span>
+              <select id="voiceSelect" aria-label="Narrator voice">
+                <option value="">Loading voices…</option>
+              </select>
+            </label>
             <label class="speed-control">
               <span>Speed</span>
               <select id="speechRate" aria-label="Narration speed">

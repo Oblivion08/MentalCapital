@@ -12,6 +12,7 @@
   const listenButton = document.getElementById("listenButton");
   const pauseButton = document.getElementById("pauseButton");
   const stopButton = document.getElementById("stopButton");
+  const voiceSelect = document.getElementById("voiceSelect");
   const speechRate = document.getElementById("speechRate");
   const speechSupported = "speechSynthesis" in window && "SpeechSynthesisUtterance" in window;
   let narrationItems = [];
@@ -36,10 +37,45 @@
     updateProgress();
   }
 
+  function availableEnglishVoices() {
+    return window.speechSynthesis.getVoices().filter((voice) => voice.lang.toLowerCase().startsWith("en"));
+  }
+
+  function likelyFemaleVoice(voice) {
+    const femaleNames = [
+      "female", "zira", "aria", "jenny", "samantha", "victoria", "karen", "moira",
+      "tessa", "serena", "susan", "hazel", "linda", "heera", "neerja", "sonia",
+      "natasha", "emma", "ava", "allison", "salli", "joanna", "kendra", "kimberly",
+    ];
+    const name = voice.name.toLowerCase();
+    return femaleNames.some((part) => name.includes(part));
+  }
+
+  function populateVoices() {
+    if (!speechSupported) return;
+    const voices = availableEnglishVoices();
+    if (!voices.length) return;
+    const savedVoice = localStorage.getItem("mentalCapitalVoice");
+    const preferred = voices.find((voice) => voice.name === savedVoice)
+      || voices.find((voice) => voice.lang.toLowerCase() === "en-ph" && likelyFemaleVoice(voice))
+      || voices.find(likelyFemaleVoice)
+      || voices.find((voice) => voice.lang.toLowerCase() === "en-ph")
+      || voices[0];
+
+    voiceSelect.innerHTML = "";
+    voices.forEach((voice) => {
+      const option = document.createElement("option");
+      option.value = voice.name;
+      option.textContent = `${voice.name} (${voice.lang})${likelyFemaleVoice(voice) ? " ♀" : ""}`;
+      voiceSelect.appendChild(option);
+    });
+    voiceSelect.value = preferred.name;
+  }
+
   function narrationVoice() {
-    const voices = window.speechSynthesis.getVoices();
-    return voices.find((voice) => voice.lang.toLowerCase().startsWith("en-ph"))
-      || voices.find((voice) => voice.lang.toLowerCase().startsWith("en"))
+    const voices = availableEnglishVoices();
+    return voices.find((voice) => voice.name === voiceSelect.value)
+      || voices.find(likelyFemaleVoice)
       || voices[0];
   }
 
@@ -161,6 +197,15 @@
       setAudioState();
     }
   });
+  voiceSelect.addEventListener("change", () => {
+    localStorage.setItem("mentalCapitalVoice", voiceSelect.value);
+    if (narrationActive) {
+      window.speechSynthesis.cancel();
+      narrationPaused = false;
+      speakNext();
+      setAudioState();
+    }
+  });
 
   document.getElementById("searchInput").addEventListener("input", (event) => {
     const query = event.target.value.trim().toLowerCase();
@@ -193,6 +238,11 @@
   if (!speechSupported) {
     listenButton.textContent = "Audio unavailable";
     listenButton.title = "Try Chrome, Edge, or Safari for audiobook playback.";
+    voiceSelect.disabled = true;
+    voiceSelect.innerHTML = '<option value="">Unavailable</option>';
+  } else {
+    populateVoices();
+    window.speechSynthesis.onvoiceschanged = populateVoices;
   }
   setAudioState();
 

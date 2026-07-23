@@ -79,12 +79,13 @@ button { color: inherit; }
 .audio-button:hover:not(:disabled) { border-color: var(--gold); }
 .audio-button:disabled { opacity: .42; cursor: default; }
 .audio-button.speaking { color: #fff; border-color: var(--forest); background: var(--forest); }
-.speed-control { display: flex; align-items: center; gap: 5px; padding-left: 3px; }
-.speed-control span { font-size: 10px; }
-.speed-control select {
+.speed-control, .voice-control { display: flex; align-items: center; gap: 5px; padding-left: 3px; }
+.speed-control span, .voice-control span { font-size: 10px; }
+.speed-control select, .voice-control select {
   min-height: 34px; padding: 0 7px; border: 1px solid var(--line); border-radius: 999px;
   color: var(--ink); background: var(--panel); outline: none; cursor: pointer;
 }
+.voice-control select { max-width: 170px; }
 .chapter-body .narrating {
   border-radius: 4px; background: rgba(200, 164, 94, .18);
   box-shadow: 0 0 0 4px rgba(200, 164, 94, .18);
