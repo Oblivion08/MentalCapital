@@ -9,9 +9,19 @@
   const prev = document.getElementById("prevButton");
   const next = document.getElementById("nextButton");
   const bookmark = document.getElementById("bookmarkButton");
+  const listenButton = document.getElementById("listenButton");
+  const pauseButton = document.getElementById("pauseButton");
+  const stopButton = document.getElementById("stopButton");
+  const speechRate = document.getElementById("speechRate");
+  const speechSupported = "speechSynthesis" in window && "SpeechSynthesisUtterance" in window;
+  let narrationItems = [];
+  let narrationIndex = 0;
+  let narrationActive = false;
+  let narrationPaused = false;
   let current = Math.min(Number(localStorage.getItem("mentalCapitalChapter") || 0), sections.length - 1);
 
   function show(index, scroll = true) {
+    stopNarration();
     current = Math.max(0, Math.min(index, sections.length - 1));
     articles.forEach((item, i) => item.classList.toggle("active", i === current));
     tocButtons.forEach((item, i) => item.classList.toggle("active", i === current));
@@ -24,6 +34,93 @@
     closeMenu();
     if (scroll) reader.scrollIntoView({ behavior: "smooth" });
     updateProgress();
+  }
+
+  function narrationVoice() {
+    const voices = window.speechSynthesis.getVoices();
+    return voices.find((voice) => voice.lang.toLowerCase().startsWith("en-ph"))
+      || voices.find((voice) => voice.lang.toLowerCase().startsWith("en"))
+      || voices[0];
+  }
+
+  function setAudioState() {
+    listenButton.disabled = !speechSupported;
+    pauseButton.disabled = !narrationActive;
+    stopButton.disabled = !narrationActive;
+    listenButton.classList.toggle("speaking", narrationActive && !narrationPaused);
+    listenButton.textContent = narrationActive ? "▶ Listening" : "▶ Listen";
+    pauseButton.textContent = narrationPaused ? "▶ Resume" : "⏸ Pause";
+  }
+
+  function clearNarrationHighlight() {
+    document.querySelectorAll(".narrating").forEach((item) => item.classList.remove("narrating"));
+  }
+
+  function speakNext() {
+    if (!narrationActive || narrationIndex >= narrationItems.length) {
+      stopNarration();
+      return;
+    }
+
+    clearNarrationHighlight();
+    const item = narrationItems[narrationIndex];
+    item.classList.add("narrating");
+    item.scrollIntoView({ behavior: "smooth", block: "center" });
+
+    const utterance = new SpeechSynthesisUtterance(item.textContent.trim());
+    utterance.rate = Number(speechRate.value);
+    utterance.pitch = 1;
+    const voice = narrationVoice();
+    if (voice) utterance.voice = voice;
+    utterance.onend = () => {
+      if (!narrationActive) return;
+      narrationIndex += 1;
+      speakNext();
+    };
+    utterance.onerror = (event) => {
+      if (event.error !== "canceled" && event.error !== "interrupted") stopNarration();
+    };
+    window.speechSynthesis.speak(utterance);
+  }
+
+  function startNarration() {
+    if (!speechSupported) {
+      alert("The audiobook reader is not supported by this browser. Try Chrome, Edge, or Safari.");
+      return;
+    }
+    stopNarration();
+    const article = articles[current];
+    narrationItems = [
+      article.querySelector(".chapter-header h2"),
+      ...article.querySelectorAll(".chapter-body h3, .chapter-body p, .chapter-body blockquote"),
+    ].filter((item) => item && item.textContent.trim());
+    narrationIndex = 0;
+    narrationActive = true;
+    narrationPaused = false;
+    setAudioState();
+    speakNext();
+  }
+
+  function pauseOrResumeNarration() {
+    if (!narrationActive) return;
+    if (narrationPaused) {
+      window.speechSynthesis.resume();
+      narrationPaused = false;
+    } else {
+      window.speechSynthesis.pause();
+      narrationPaused = true;
+    }
+    setAudioState();
+  }
+
+  function stopNarration() {
+    if (speechSupported) window.speechSynthesis.cancel();
+    narrationActive = false;
+    narrationPaused = false;
+    narrationItems = [];
+    narrationIndex = 0;
+    clearNarrationHighlight();
+    setAudioState();
   }
 
   function updateProgress() {
@@ -52,6 +149,18 @@
     localStorage.setItem("mentalCapitalChapter", String(current));
     bookmark.textContent = "♥ Place saved";
   });
+  listenButton.addEventListener("click", startNarration);
+  pauseButton.addEventListener("click", pauseOrResumeNarration);
+  stopButton.addEventListener("click", stopNarration);
+  speechRate.addEventListener("change", () => {
+    localStorage.setItem("mentalCapitalSpeechRate", speechRate.value);
+    if (narrationActive) {
+      window.speechSynthesis.cancel();
+      narrationPaused = false;
+      speakNext();
+      setAudioState();
+    }
+  });
 
   document.getElementById("searchInput").addEventListener("input", (event) => {
     const query = event.target.value.trim().toLowerCase();
@@ -77,7 +186,18 @@
     localStorage.setItem("mentalCapitalTheme", document.body.classList.contains("dark") ? "dark" : "light");
   });
 
+  const savedSpeechRate = localStorage.getItem("mentalCapitalSpeechRate");
+  if (savedSpeechRate && [...speechRate.options].some((option) => option.value === savedSpeechRate)) {
+    speechRate.value = savedSpeechRate;
+  }
+  if (!speechSupported) {
+    listenButton.textContent = "Audio unavailable";
+    listenButton.title = "Try Chrome, Edge, or Safari for audiobook playback.";
+  }
+  setAudioState();
+
   addEventListener("scroll", updateProgress, { passive: true });
+  addEventListener("beforeunload", stopNarration);
   addEventListener("keydown", (event) => {
     if (event.key === "ArrowRight") show(current + 1);
     if (event.key === "ArrowLeft") show(current - 1);

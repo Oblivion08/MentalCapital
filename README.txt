@@ -1,15 +1,9 @@
-MENTAL CAPITAL EBOOK — VERCEL UPLOAD
+MENTAL CAPITAL — COMPLETE VERCEL PACKAGE
 
-Option 1: Vercel website
-1. Open vercel.com and select Add New > Project.
-2. Upload this entire folder or connect it through GitHub.
-3. Keep the default settings. No framework or build command is required.
-4. Select Deploy.
+Upload all files and folders to the root of the GitHub repository.
+index.html  = complete interactive ebook
+audio.html  = separate audiobook page with female voice preference
+downloads/  = downloadable complete PDF edition
+assets/     = original book cover
 
-Option 2: Vercel CLI
-1. Open a terminal inside this folder.
-2. Run: npx vercel
-3. Follow the prompts, then run: npx vercel --prod
-
-Main file: index.html
-The ebook saves reading progress, text size, and theme on the reader's device.
+Vercel will redeploy automatically after the files are pushed to main.
